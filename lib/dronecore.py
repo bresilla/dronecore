@@ -1,5 +1,5 @@
 import time
-import dronekit
+from dronekit import VehicleMode
 from pymavlink import mavutil
 
 def status_info(vehicle):
@@ -20,7 +20,7 @@ def check_n_arm(vehicle):
             time.sleep(1)
         print "Arming motors"
         # Copter should arm in GUIDED mode
-        vehicle.mode    = dronekit.VehicleMode("GUIDED")
+        vehicle.mode    = VehicleMode("GUIDED")
         vehicle.armed   = True
         while not vehicle.armed:
             print " Waiting for arming..."
@@ -28,7 +28,7 @@ def check_n_arm(vehicle):
     else:
         print "Vehicle already armed"
 def take_off(vehicle, z=2):
-    vehicle.simple_takeoff(z) # Take off to target altitude
+    vehicle.simple_takeoff(z)
     while True:
         print " Altitude: ", vehicle.location.global_relative_frame.alt 
         if vehicle.location.global_relative_frame.alt>=z*0.95:
