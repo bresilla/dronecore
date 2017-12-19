@@ -7,7 +7,7 @@ vehicle = connect('udp:192.168.1.177:14551', baud=57600, wait_ready=True)
 
 
 dronecore.check_n_arm(vehicle)
-dronecore.move_down(vehicle, 5) 
+dronecore.move_down(vehicle, 4) 
 dronecore.take_off(vehicle)
 
 
