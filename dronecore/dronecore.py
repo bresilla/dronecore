@@ -1,5 +1,5 @@
 import time
-from dronekit import VehicleMode
+from dronekit import VehicleMode, LocationGlobalRelative
 from pymavlink import mavutil
 
 def status_info(vehicle):
@@ -27,7 +27,7 @@ def check_n_arm(vehicle):
             time.sleep(1)
     else:
         print "Vehicle already armed"
-def take_off(vehicle, z=2):
+def take_off(vehicle, z=1):
     vehicle.simple_takeoff(z)
     while True:
         print " Altitude: ", vehicle.location.global_relative_frame.alt 
@@ -106,4 +106,15 @@ def move_backward(vehicle, x=0.25):
         0, 0)
     vehicle.send_mavlink(msg)
     vehicle.flush()
-
+def simple_goto(vehicle, waypoints):
+    for point in waypoints:
+        print "going to point: ", waypoints.index(point)+1
+        vehicle.simple_goto(LocationGlobalRelative(point[0], point[1], point[2]))
+        #time.sleep(point[1])
+        difference_lat = (point[0] - vehicle.location.global_relative_frame.lat) *100000
+        difference_lon = (point[1] - vehicle.location.global_relative_frame.lon) *100000
+        while abs(difference_lat) > 0.5 and abs(difference_lon) > 0.5:
+            difference_lat = (point[0] - vehicle.location.global_relative_frame.lat) *100000
+            difference_lon = (point[1] - vehicle.location.global_relative_frame.lon) *100000
+            print int(difference_lat), int(difference_lon)
+            time.sleep(2)
