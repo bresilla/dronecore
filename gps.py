@@ -2,8 +2,9 @@ import time
 from dronecore import dronecore
 from dronekit import connect, VehicleMode
 
-#vehicle = connect('udp:192.168.1.177:14555', baud=57600, wait_ready=True)
-vehicle = connect('udp:10.42.0.1:14555', baud=57600, wait_ready=True)
+vehicle = connect('udp:192.168.1.177:14555', baud=57600, wait_ready=True)
+#vehicle = connect('udp:10.42.0.1:14555', baud=57600, wait_ready=True)
+#vehicle = connect('udp:127.0.0.1:14553', baud=57600, wait_ready=True)
 
 dronecore.check_n_arm(vehicle)
 dronecore.status_info(vehicle) 
@@ -35,7 +36,8 @@ waypoints = [(44.549095,   11.416070, altittude),
             (44.548946,	11.416425, altittude),
             (44.549831,	11.417106, altittude)]
 
-dronecore.simple_goto(vehicle, waypoints)
+dronecore.take_off(vehicle, 2)
+dronecore.simple_goto(vehicle, waypoints, 2)
 dronecore.status_info(vehicle)
 
 #vehicle.mode = VehicleMode("LAND")

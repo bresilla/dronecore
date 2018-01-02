@@ -1,5 +1,5 @@
 {
     "terminal.integrated.env.linux": {
-        "PATH": "/home/trim/.platformio/penv/bin:/home/trim/bin:/home/trim/.local/bin:/home/trim/bin:/home/trim/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+        "PATH": "/home/trim/.platformio/penv/bin:/home/trim/bin:/home/trim/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
     }
 }

@@ -9,7 +9,7 @@ def status_info(vehicle):
     print " Last Heartbeat: %s" % vehicle.last_heartbeat
     print " Is Armable?: %s" % vehicle.is_armable
     print " System status: %s" % vehicle.system_status.state
-    print " Mode: %s" % vehicle.mode.name    # settable
+    print " Mode: %s" % vehicle.mode.name
     print "---------------------------------------------------"
 def check_n_arm(vehicle):
     print "Basic pre-arm checks"
@@ -27,14 +27,15 @@ def check_n_arm(vehicle):
             time.sleep(1)
     else:
         print "Vehicle already armed"
-def take_off(vehicle, z=1):
+def take_off(vehicle, z=1, sleep=1):
+    print "Taking off..."
     vehicle.simple_takeoff(z)
     while True:
         print " Altitude: ", vehicle.location.global_relative_frame.alt 
         if vehicle.location.global_relative_frame.alt>=z*0.95:
             break
-        time.sleep(1)
-def move_up(vehicle, z=0.25):
+        time.sleep(sleep)
+def move_up(vehicle, z=0.25, cycles=1):
     msg = vehicle.message_factory.set_position_target_local_ned_encode(
         0,                                  # time_boot_ms (not used)
         0, 0,                               # target system, target component
@@ -44,9 +45,11 @@ def move_up(vehicle, z=0.25):
         0, 0, -1*z,                          # m/s
         0, 0, 0,                            # x, y, z acceleration
         0, 0)
-    vehicle.send_mavlink(msg)
+    for times in range(cycles):
+        vehicle.send_mavlink(msg)
+        time.sleep(1)
     vehicle.flush()
-def move_down(vehicle, z=0.25):
+def move_down(vehicle, z=0.25, cycles=1):
     msg = vehicle.message_factory.set_position_target_local_ned_encode(
         0,                                  # time_boot_ms (not used)
         0, 0,                               # target system, target component
@@ -56,9 +59,11 @@ def move_down(vehicle, z=0.25):
         0, 0, z,                          # m/s
         0, 0, 0,                            # x, y, z acceleration
         0, 0)
-    vehicle.send_mavlink(msg)
+    for times in range(cycles):
+        vehicle.send_mavlink(msg)
+        time.sleep(1)
     vehicle.flush()
-def move_left(vehicle, y=0.25):
+def move_left(vehicle, y=0.25, cycles=1):
     msg = vehicle.message_factory.set_position_target_local_ned_encode(
         0,                                  # time_boot_ms (not used)
         0, 0,                               # target system, target component
@@ -68,9 +73,11 @@ def move_left(vehicle, y=0.25):
         0, -1*y, 0,                          # m/s
         0, 0, 0,                            # x, y, z acceleration
         0, 0)
-    vehicle.send_mavlink(msg)
+    for times in range(cycles):
+        vehicle.send_mavlink(msg)
+        time.sleep(1)
     vehicle.flush()
-def move_right(vehicle, y=0.25):
+def move_right(vehicle, y=0.25, cycles=1):
     msg = vehicle.message_factory.set_position_target_local_ned_encode(
         0,                                  # time_boot_ms (not used)
         0, 0,                               # target system, target component
@@ -80,9 +87,11 @@ def move_right(vehicle, y=0.25):
         0, y, 0,                          # m/s
         0, 0, 0,                            # x, y, z acceleration
         0, 0)
-    vehicle.send_mavlink(msg)
+    for times in range(cycles):
+        vehicle.send_mavlink(msg)
+        time.sleep(1)
     vehicle.flush()
-def move_forward(vehicle, x=0.25):
+def move_forward(vehicle, x=0.25, cycles=1):
     msg = vehicle.message_factory.set_position_target_local_ned_encode(
         0,                                  # time_boot_ms (not used)
         0, 0,                               # target system, target component
@@ -92,9 +101,11 @@ def move_forward(vehicle, x=0.25):
         x, 0, 0,                          # m/s
         0, 0, 0,                            # x, y, z acceleration
         0, 0)
-    vehicle.send_mavlink(msg)
+    for times in range(cycles):
+        vehicle.send_mavlink(msg)
+        time.sleep(1)
     vehicle.flush()
-def move_backward(vehicle, x=0.25):
+def move_backward(vehicle, x=0.25, cycles=1):
     msg = vehicle.message_factory.set_position_target_local_ned_encode(
         0,                                  # time_boot_ms (not used)
         0, 0,                               # target system, target component
@@ -104,9 +115,11 @@ def move_backward(vehicle, x=0.25):
         -1*x, 0, 0,                       # m/s
         0, 0, 0,                            # x, y, z acceleration
         0, 0)
-    vehicle.send_mavlink(msg)
+    for times in range(cycles):
+        vehicle.send_mavlink(msg)
+        time.sleep(1)
     vehicle.flush()
-def simple_goto(vehicle, waypoints):
+def simple_goto(vehicle, waypoints, sleep=1):
     for point in waypoints:
         print "going to point: ", waypoints.index(point)+1
         vehicle.simple_goto(LocationGlobalRelative(point[0], point[1], point[2]))
@@ -117,4 +130,4 @@ def simple_goto(vehicle, waypoints):
             difference_lat = (point[0] - vehicle.location.global_relative_frame.lat) *100000
             difference_lon = (point[1] - vehicle.location.global_relative_frame.lon) *100000
             print int(difference_lat), int(difference_lon)
-            time.sleep(2)
+            time.sleep(sleep)
