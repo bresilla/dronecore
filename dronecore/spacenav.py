@@ -15,6 +15,10 @@ def main():
 class Navigator():
     def mapit(self, x, in_min, in_max, out_min, out_max):
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    
+    def percentage(self, percent, whole):
+        if percent == 0: return 0
+        else: return int((percent * whole) / 100.0)
 
     def __init__(self, controller_name):
 
@@ -31,15 +35,14 @@ class Navigator():
         self.dev_obj = evdev.InputDevice(dev_location)
         self.axispos = [0, 0, 0, 0, 0, 0]
         self.buttons = [0, 0]
+        self.cutted = None
         self.mapped_neg = None
         self.mapped_pos = None
 
-    def get_values(self, max_value=100, cut_value=1, min_value=0):
+    def get_values(self, max_value=100, cut_value=10, min_value=0):
         if max_value < 0: max_value = abs(max_value)
-        if cut_value > 20: cut_value=20
-        if cut_value < 1: cut_value=1
-        if min_value < 0: min_value=0
-        if min_value > max_value: min_value=0
+        if min_value < 0 or min_value > max_value: min_value=0
+        cut_value = self.percentage(cut_value, 350)
         event_gen = self.dev_obj.read()
         if event_gen is not None:
             for event in event_gen:
@@ -56,9 +59,9 @@ class Navigator():
                         self.axispos[4] = int(self.mapit(event.value, -350, 350, 350, -350))
                     elif event.code == 5:
                         self.axispos[5] = int(event.value)
-                self.axispos = [0 if abs(i) < cut_value*10 else i for i in self.axispos]
-                self.mapped_neg = [0 if abs(i) < cut_value*10 else self.mapit(i, -cut_value*10, -350, 0, -max_value) if i < 0 else self.mapit(i, cut_value*10, 350, 0, max_value) for i in self.axispos]
-                self.mapped_pos = [(max_value+min_value)/2 if abs(i) < cut_value*10 else self.mapit(i, -cut_value*10, -350, (max_value+min_value)/2, min_value) if i < 0 else self.mapit(i, cut_value*10, 350, (max_value+min_value)/2, max_value) for i in self.axispos]
+                self.cutted = [0 if abs(i) < cut_value else self.mapit(i, -cut_value, -350, 0, -350+cut_value) if i < 0 else self.mapit(i, cut_value, 350, 0, 350-cut_value) for i in self.axispos]
+                self.mapped_neg = [0 if abs(i) < cut_value else self.mapit(i, -cut_value, -350, 0, -max_value) if i < 0 else self.mapit(i, cut_value, 350, 0, max_value) for i in self.axispos]
+                self.mapped_pos = [(max_value+min_value)/2 if abs(i) < cut_value else self.mapit(i, -cut_value, -350, (max_value+min_value)/2, min_value) if i < 0 else self.mapit(i, cut_value, 350, (max_value+min_value)/2, max_value) for i in self.axispos]
 
                 if event.type == 1:
                     if event.code == 256:

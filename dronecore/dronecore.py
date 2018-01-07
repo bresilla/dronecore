@@ -24,6 +24,11 @@ class Vehicle():
         logging.debug("---------------------------------------------------")
 
 
+    def change_mode(self, vmode):
+        self.vehicle.mode    = VehicleMode(vmode)
+        logging.debug("Mode changed to: "+str(vmode))
+        time.sleep(5)
+
     def check_n_arm(self):
         logging.debug("Basic pre-arm checks")
         if not self.vehicle.armed:
@@ -38,6 +43,7 @@ class Vehicle():
             while not self.vehicle.armed:
                 logging.debug("Waiting for arming...")
                 time.sleep(1)
+            logging.debug("READY TO ROLL")
         else:
             logging.debug("Vehicle already armed")
 
