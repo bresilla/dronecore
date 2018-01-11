@@ -1,24 +1,46 @@
-import evdev
-import logging
+import time, logging, evdev
 from select import select
 
 logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] %(message)s", datefmt="%H:%M:%S")
 
-def main():
-    controller = Joystick("Microsoft X-Box One S pad")
-    while True:
-        select([controller.dev_obj], [], [])
-        controller.get_values()
+def get_devices():
+    devices = [evdev.InputDevice(fn) for fn in evdev.list_devices()]
+    for device in devices:
+        logging.debug(str(device))
 
-class Joystick():
-    def mapit(self, x, in_min, in_max, out_min, out_max):
-        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+def get_values_name(name):
+    port = None
+    devices = [evdev.InputDevice(fn) for fn in evdev.list_devices()]
+    for device in devices:
+        #print device
+        if device.name == name:
+            port = device.fn
+            print port
+    if port:
+        device = evdev.InputDevice(port)
+        for event in device.read_loop():
+            typ = event.type
+            cod = event.code
+            val = int(event.value)
+            logging.debug(str(typ) +" "+ str(cod) +" "+ str(val))
 
-    def percentage(self, percent, whole):
-        if percent == 0: return 0
-        else: return int((percent * whole) / 100.0)
+def get_values_port(port):
+    device = evdev.InputDevice(port)
+    for event in device.read_loop():
+        typ = event.type
+        cod = event.code
+        val = int(event.value)
+        logging.debug(str(typ) +" "+ str(cod) +" "+ str(val))
 
-    def __init__(self, controller_name):
+def mapit(x, in_min, in_max, out_min, out_max):
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+
+def percentage(percent, whole):
+    if percent == 0: return 0
+    else: return int((percent * whole) / 100.0)
+
+class Transmitter():
+    def __init__(self, controller_name="Flysky FS-i6S emulator"):
 
         devices = [evdev.InputDevice(fn) for fn in evdev.list_devices()]
         dev_location = None
@@ -31,8 +53,89 @@ class Joystick():
             raise "Device not found!"
 
         self.dev_obj = evdev.InputDevice(dev_location)
-        self.axs1 = [0, 0, 0, 0]
-        self.axs2 = [0, 0, 0, 0]
+        self.axis = [0, 0, 0, 0]
+
+        self.button = [0, 0]
+        self.switch = [0, 0]
+        self.flymod = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.tempswitch = [0, 0]
+
+        self.cutted = None
+        self.mapped_neg = None
+        self.mapped_pos = None
+
+    def get_values(self, max_value=100, cut_value=10, min_value=0, precision=100, self_centered=False):
+        if max_value < 0: max_value = abs(max_value)
+        if min_value < 0 or min_value > max_value: min_value=0
+        cut_value = percentage(cut_value, precision)
+        event_gen = self.dev_obj.read()
+        if event_gen is not None:
+            for event in event_gen:
+                if event.type == 3:
+                    if event.code == 0:
+                        self.axis[3] = int(mapit(event.value, 21, 232, -precision, precision))
+                    elif event.code == 1:
+                        self.axis[2] = int(mapit(event.value, 21, 232, -precision, precision))
+                    elif event.code == 2:
+                        self.axis[0] = int(mapit(event.value, 21, 232, -precision, precision))
+                    elif event.code == 3:
+                        self.axis[1] = int(mapit(event.value, 21, 232, -precision, precision))
+
+                self.cutted = [0 if abs(i) < cut_value else mapit(i, -cut_value, -precision, 0, -precision+cut_value) if i < 0 else mapit(i, cut_value, precision, 0, precision-cut_value) for i in self.axis]
+                self.mapped_neg = [0 if abs(i) < cut_value else mapit(i, -cut_value, -precision, 0, -max_value) if i < 0 else mapit(i, cut_value, precision, 0, max_value) for i in self.axis]
+                self.mapped_pos = [(max_value+min_value)/2 if abs(i) < cut_value else mapit(i, -cut_value, -precision, (max_value+min_value)/2, min_value) if i < 0 else mapit(i, cut_value, precision, (max_value+min_value)/2, max_value) for i in self.axis]
+
+                if not self_centered:                    
+                    self.cutted[0] = int(mapit(self.axis[0], -precision, precision, -precision+cut_value, precision-cut_value))
+                    self.mapped_neg[0] = int(mapit(self.cutted[0], -precision+cut_value, precision-cut_value, -max_value, max_value))
+                    self.mapped_pos[0] = int(mapit(self.cutted[0], -precision+cut_value, precision-cut_value, min_value, max_value))
+                
+                if event.type == 1:
+                    if event.code == 294: self.button[0] = int(event.value)
+                    elif event.code == 295: self.button[1] = int(event.value)
+                    elif event.code == 293: self.switch[1] = int(event.value)
+                    elif event.code == 288: self.switch[0] = abs(int(event.value)-1)
+
+
+                    if event.code == 290 and event.value == 1: self.tempswitch[0] = 0
+                    elif event.code == 290 and event.value == 0: self.tempswitch[0] = 1
+                    elif event.code == 289 and event.value == 0: self.tempswitch[0] = 1
+                    elif event.code == 289 and event.value == 1: self.tempswitch[0] = 2
+
+
+                    if event.code == 292 and event.value == 1: self.tempswitch[1] = 0
+                    elif event.code == 292 and event.value == 0: self.tempswitch[1] = 1
+                    elif event.code == 291 and event.value == 0: self.tempswitch[1] = 1
+                    elif event.code == 291 and event.value == 1: self.tempswitch[1] = 2
+                
+                if self.tempswitch[0] == 0 and self.tempswitch[1] == 0: self.flymod = [1, 0, 0, 0, 0, 0, 0, 0, 0]
+                elif self.tempswitch[0] == 1 and self.tempswitch[1] == 0: self.flymod = [0, 1, 0, 0, 0, 0, 0, 0, 0]
+                elif self.tempswitch[0] == 2 and self.tempswitch[1] == 0: self.flymod = [0, 0, 1, 0, 0, 0, 0, 0, 0]
+                elif self.tempswitch[0] == 2 and self.tempswitch[1] == 1: self.flymod = [0, 0, 0, 1, 0, 0, 0, 0, 0]
+                elif self.tempswitch[0] == 1 and self.tempswitch[1] == 1: self.flymod = [0, 0, 0, 0, 1, 0, 0, 0, 0]
+                elif self.tempswitch[0] == 0 and self.tempswitch[1] == 1: self.flymod = [0, 0, 0, 0, 0, 1, 0, 0, 0]
+                elif self.tempswitch[0] == 0 and self.tempswitch[1] == 2: self.flymod = [0, 0, 0, 0, 0, 0, 1, 0, 0]
+                elif self.tempswitch[0] == 1 and self.tempswitch[1] == 2: self.flymod = [0, 0, 0, 0, 0, 0, 0, 1, 0]
+                elif self.tempswitch[0] == 2 and self.tempswitch[1] == 2: self.flymod = [0, 0, 0, 0, 0, 0, 0, 0, 1]
+
+            logging.debug(str(self.mapped_pos))
+            logging.debug(str(self.mapped_neg))
+
+class Joystick():
+    def __init__(self, controller_name="Microsoft X-Box One S pad"): 
+
+        devices = [evdev.InputDevice(fn) for fn in evdev.list_devices()]
+        dev_location = None
+        for dev in devices:
+            if dev.name == controller_name:
+                dev_location = dev.fn
+                logging.debug("Device found: " + dev.name + " at: " + dev.fn)
+                break
+        if dev_location is None:
+            raise "Device not found!"
+
+        self.dev_obj = evdev.InputDevice(dev_location)
+        self.axis = [0, 0, 0, 0]
         self.trig = [0, 0]
 
         self.arro = [0, 0, 0, 0]
@@ -42,55 +145,46 @@ class Joystick():
         self.menu = [0, 0]
         
         
-        self.axs1_cutted = None
-        self.axs2_cutted = None
         self.trig_cutted = None
-
-        self.trig_mapped = None
-        self.trig_mapped = None
         self.trig_mapped = None
 
+        self.cutted = None
+        self.mapped_neg = None
+        self.mapped_pos = None
 
-    def get_values(self, max_value=100, cut_value=10):
+
+    def get_values(self, max_value=100, cut_value=10, min_value=0, precision=1023):
         if max_value < 0: max_value = abs(max_value)
-        cut_value = self.percentage(cut_value, 1023)
+        cut_value = percentage(cut_value, precision)
         event_gen = self.dev_obj.read()
         if event_gen is not None:
             for event in event_gen:
                 if event.type == 3:
                     if event.code == 16:
-                        if event.value == -1: self.arro[2] = abs(int(event.value))
-                        elif event.value == 1: self.arro[3] = abs(int(event.value))
+                        if event.value == -1: self.arro[2] = int(mapit(abs(event.value), 0, 1024, 0, precision))
+                        elif event.value == 1: self.arro[3] = int(mapit(abs(event.value), 0, 1024, 0, precision))
                         else: self.arro[3], self.arro[2] = 0, 0
                     elif event.code == 17:
-                        if event.value == -1: self.arro[0] = abs(int(event.value))
-                        elif event.value == 1: self.arro[1] = abs(int(event.value))
+                        if event.value == -1: self.arro[0] = int(mapit(abs(event.value), 0, 1024, 0, precision))
+                        elif event.value == 1: self.arro[1] = int(mapit(abs(event.value), 0, 1024, 0, precision))
                         else: self.arro[0], self.arro[1] = 0, 0
                     
                     elif event.code == 2:self.trig[0] = int(event.value)
                     elif event.code == 5:self.trig[1] = int(event.value)
 
-                    elif event.code == 1:
-                        if event.value < 0:self.axs1[0] = int(self.mapit(abs(event.value), 0, 32768, 0, 1023))
-                        elif event.value > 0:self.axs1[1] = int(self.mapit(abs(event.value), 0, 32767, 0, 1023))
-                    elif event.code == 0:
-                        if event.value < 0:self.axs1[2] = int(self.mapit(abs(event.value), 0, 32768, 0, 1023))
-                        elif event.value > 0:self.axs1[3] = int(self.mapit(abs(event.value), 0, 32767, 0, 1023))
-                    
-                    elif event.code == 4:
-                        if event.value < 0:self.axs2[0] = int(self.mapit(abs(event.value), 0, 32768, 0, 1023))
-                        elif event.value > 0:self.axs2[1] = int(self.mapit(abs(event.value), 0, 32767, 0, 1023))
-                    elif event.code == 3:
-                        if event.value < 0:self.axs2[2] = int(self.mapit(abs(event.value), 0, 32768, 0, 1023))
-                        elif event.value > 0:self.axs2[3] = int(self.mapit(abs(event.value), 0, 32767, 0, 1023))
+                    elif event.code == 1: self.axis[0] = int(mapit(abs(event.value), -32767, 32768, -precision, precision))
+                    elif event.code == 0: self.axis[1] = int(mapit(abs(event.value), -32767, 32768, -precision, precision))
+                    elif event.code == 4: self.axis[2] = int(mapit(abs(event.value), -32767, 32768, -precision, precision))
+                    elif event.code == 3: self.axis[3] = int(mapit(abs(event.value), -32767, 32768, -precision, precision))
                 
-                self.axs1_cutted = [0 if i < cut_value else self.mapit(i, cut_value, 1023, 0, 1023-cut_value) for i in self.axs1]
-                self.axs2_cutted = [0 if i < cut_value else self.mapit(i, cut_value, 1023, 0, 1023-cut_value) for i in self.axs2]
-                self.trig_cutted = [0 if i < cut_value else self.mapit(i, cut_value, 1023, 0, 1023-cut_value) for i in self.trig]
 
-                self.axs1_mapped = [self.mapit(i, 0, 1023-cut_value, 0, max_value) for i in self.axs1_cutted]
-                self.axs2_mapped = [self.mapit(i, 0, 1023-cut_value, 0, max_value) for i in self.axs2_cutted]
-                self.trig_mapped = [self.mapit(i, 0, 1023-cut_value, 0, max_value) for i in self.trig_cutted]
+                self.cutted = [0 if abs(i) < cut_value else mapit(i, -cut_value, -precision, 0, -precision+cut_value) if i < 0 else mapit(i, cut_value, precision, 0, precision-cut_value) for i in self.axis]
+                self.mapped_neg = [0 if abs(i) < cut_value else mapit(i, -cut_value, -precision, 0, -max_value) if i < 0 else mapit(i, cut_value, precision, 0, max_value) for i in self.axis]
+                self.mapped_pos = [(max_value+min_value)/2 if abs(i) < cut_value else mapit(i, -cut_value, -precision, (max_value+min_value)/2, min_value) if i < 0 else mapit(i, cut_value, precision, (max_value+min_value)/2, max_value) for i in self.axis]
+
+
+                self.trig_cutted = [0 if i < cut_value else mapit(i, cut_value, precision, 0, precision-cut_value) for i in self.trig]
+                self.trig_mapped = [mapit(i, 0, precision-cut_value, 0, max_value) for i in self.trig_cutted]
 
 
                 if event.type == 1:                   
@@ -108,11 +202,59 @@ class Joystick():
                     elif event.code == 317: self.stik[0] = int(event.value)
                     elif event.code == 318: self.stik[1] = int(event.value)
                     
-        #logging.debug(str(self.axs1_mapped))
-        #logging.debug(str(self.axs2_mapped))
-        #logging.debug(str(self.trig_cutted))
-        #logging.debug(str(self.arro)+str(self.abxy)+str(self.stik)+str(self.butt)+str(self.menu))
-        
+            #logging.debug(str(self.mapped_pos))
+            #logging.debug(str(self.mapped_neg))
 
-if __name__ == "__main__":
-    main()
+class Navigator():
+    def __init__(self, controller_name="3Dconnexion SpaceNavigator"):
+
+        devices = [evdev.InputDevice(fn) for fn in evdev.list_devices()]
+        dev_location = None
+        for dev in devices:
+            if dev.name == controller_name:
+                dev_location = dev.fn
+                logging.debug("Device found: " + dev.name + " at: " + dev.fn)
+                break
+        if dev_location is None:
+            raise "Device not found!"
+
+        self.dev_obj = evdev.InputDevice(dev_location)
+        self.axis = [0, 0, 0, 0, 0, 0]
+        
+        self.buttons = [0, 0]
+        self.cutted = None
+        self.mapped_neg = None
+        self.mapped_pos = None
+
+    def get_values(self, max_value=100, cut_value=10, min_value=0, precision=350):
+        if max_value < 0: max_value = abs(max_value)
+        if min_value < 0 or min_value > max_value: min_value=0
+        cut_value = percentage(cut_value, precision)
+        event_gen = self.dev_obj.read()
+        if event_gen is not None:
+            for event in event_gen:
+                if event.type == 2:
+                    if event.code == 0:
+                        self.axis[0] = int(event.value)
+                    elif event.code == 1:
+                        self.axis[1] = int(mapit(event.value, -precision, precision, precision, -precision))
+                    elif event.code == 2:
+                        self.axis[2] = int(mapit(event.value, -precision, precision, precision, -precision))
+                    elif event.code == 3:
+                        self.axis[3] = int(event.value)              
+                        #self.axis[3] = int(mapit(event.value, -350, 350, 350, -350))
+                    elif event.code == 4:
+                        self.axis[4] = int(mapit(event.value, -precision, precision, precision, -precision))
+                    elif event.code == 5:
+                        self.axis[5] = int(event.value)
+                
+                self.cutted = [0 if abs(i) < cut_value else mapit(i, -cut_value, -precision, 0, -precision+cut_value) if i < 0 else mapit(i, cut_value, precision, 0, precision-cut_value) for i in self.axis]
+                self.mapped_neg = [0 if abs(i) < cut_value else mapit(i, -cut_value, -precision, 0, -max_value) if i < 0 else mapit(i, cut_value, precision, 0, max_value) for i in self.axis]
+                self.mapped_pos = [(max_value+min_value)/2 if abs(i) < cut_value else mapit(i, -cut_value, -precision, (max_value+min_value)/2, min_value) if i < 0 else mapit(i, cut_value, precision, (max_value+min_value)/2, max_value) for i in self.axis]
+
+                if event.type == 1:
+                    if event.code == 256: self.buttons[0] = int(event.value)
+                    elif event.code == 257: self.buttons[1] = int(event.value)
+                    
+            #logging.debug(str(self.mapped_pos))
+            #logging.debug(str(self.mapped_neg))

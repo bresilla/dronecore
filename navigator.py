@@ -1,42 +1,43 @@
 import time, logging, select
 import evdev
-from dronecore import devices, dronecore, spacenav, controller
+from dronecore import dronecore, controller
 from dronekit import connect
 
 logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] %(message)s", datefmt="%H:%M:%S")
 
 def main():
     #joystick = controller.Joystick("Microsoft X-Box One S pad")
-    #navigator = spacenav.Navigator("3Dconnexion SpaceNavigator")
+    #navigator = controller.Navigator("3Dconnexion SpaceNavigator")
+    transmitter = controller.Transmitter("Flysky FS-i6S emulator")
+    
     #vehicle = dronecore.Vehicle('udp:127.0.0.1:14553')
     
     time_dest = 5
     count_chk = 0
 
 
+    def arm_n_takeoff():
+        vehicle.check_n_arm()
+        vehicle.take_off(20)
+
+
     while False:
         select.select([navigator.dev_obj], [], [])
-        navigator.get_values(cut_value=25)
+        navigator.get_values()
 
         #vehicle.channels.overrides = {'1': navigator.mapped_pos[4], '2': navigator.mapped_pos[3],'4':navigator.mapped_pos[5]}        
 
+        
         if navigator.mapped_neg[2] > 0: vehicle.move_up(1)
         elif navigator.mapped_neg[2] < 0: vehicle.move_down()
         elif navigator.mapped_neg[3] > 0: vehicle.move_forward(abs(navigator.mapped_neg[3]))
         elif navigator.mapped_neg[3] < 0: vehicle.move_backward(abs(navigator.mapped_neg[3]))
         elif navigator.mapped_neg[4] > 0: vehicle.move_right(abs(navigator.mapped_neg[4]))
         elif navigator.mapped_neg[4] < 0: vehicle.move_left(abs(navigator.mapped_neg[4]))
-
-
-
-
-        #logging.debug(str(joystick.axs1_mapped))
-        #logging.debug(str(joystick.axs2_mapped))
-
     
     while False:
         select.select([joystick.dev_obj], [], [])
-        joystick.get_values(max_value=10, cut_value=50)
+        joystick.get_values()
 
 
 
@@ -75,13 +76,16 @@ def main():
         elif joystick.axs2_mapped[3] > 0: vehicle.move_right((joystick.axs2_mapped[3]/10)+(joystick.trig_mapped[0])+(joystick.trig_mapped[1]/2))
 
 
-        #logging.debug(str(joystick.axs1_mapped))
+        logging.debug(str(joystick.axs1_mapped))
         logging.debug(str(joystick.axs2_mapped))    
 
-    devices.get_devices()
+    while True:
+        select.select([transmitter.dev_obj], [], [])
+        transmitter.get_values()
 
-
-
+    #controller.get_devices()
+    #while True: controller.get_values_port("/dev/input/event17")
+    #while True: controller.get_values_name("Flysky FS-i6S emulator")
     
 
 def mapit(x, in_min, in_max, out_min, out_max):

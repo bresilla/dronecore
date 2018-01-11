@@ -173,6 +173,11 @@ class Vehicle():
                 difference_lon = (point[1] - self.vehicle.location.global_relative_frame.lon) *100000
                 logging.debug(str(int(difference_lat))+" "+str(int(difference_lon)))
                 time.sleep(sleep)
+    
+    def rc_override(self, channel, value):
+        self.vehicle.channels.overrides[str(channel)] = value
+        
+    
 
 if __name__ == "__main__":
     main()
