@@ -22,13 +22,15 @@ def transmitter_cont():
     transmitter = controller.Transmitter("Flysky FS-i6S emulator")
     while True:
         select.select([transmitter.dev_obj], [], [])
-        transmitter.get_values(100, 25, 3, 0)
+        transmitter.get_values(2000, 10, 3, 1000)
         
 
 def list_devices():
     controller.get_devices()
 
 if __name__ == "__main__":
+    list_devices();
+    
     #joistick_cont();
-    #navigator_cont();
-    transmitter_cont();
+    navigator_cont();
+    #transmitter_cont();

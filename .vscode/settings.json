@@ -6,7 +6,10 @@
     "dronecore/__init__.pyc": true,
     "dronecore/devices.pyc": true,
     "dronecore/dronecore.pyc": true,
-    "dronecore/sensata.pyc": true,
-    "dronecore/controller.pyc": true
+    "dronecore/controller.pyc": true,
+    "README.md": true,
+    "LICENSE.md": true,
+    "dronecore/__init__.py": true,
+    ".vscode": true
   }
 }

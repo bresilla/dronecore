@@ -39,18 +39,13 @@ def percentage(percent, whole):
     if percent == 0: return 0
     else: return int((abs(percent) * whole) / 100.0)
 
-def curvit(i, power, max_value):
-    if power < 2: 
-        power = 2
-    in_power = abs(i)**power
-    if i < 0: return mapit(in_power, 1, max_value**power, 0, -max_value)
-    elif i > 0: return mapit(in_power, 1, max_value**power, 1, max_value)
+def curvit(i, pwr_value, max_value):
+    if pwr_value < 2: 
+        pwr_value = 2
+    in_pwr_value = abs(i)**pwr_value
+    if i < 0: return mapit(in_pwr_value, 1, max_value**pwr_value, 0, -max_value)
+    elif i > 0: return mapit(in_pwr_value, 1, max_value**pwr_value, 1, max_value)
     else: return 0
-
-def mappos(i, max_value, cut_value, precision, min_value):
-    if abs(i) < cut_value: return (max_value+min_value)/2
-    elif i < 0: return mapit(i, -cut_value, -precision, (max_value+min_value)/2, min_value)
-    elif i > 0: return mapit(i, cut_value, precision, (max_value+min_value)/2, max_value)
 
 def mapneg(i, max_value, cut_value, precision):
     if abs(i) < cut_value: return 0 
@@ -89,9 +84,7 @@ class Transmitter():
         self.curved = None
         self.mappos = None
 
-        self.zerovl = 0
-
-    def get_values(self, max_value=100, cut_value=10, power=2, min_value=0, self_centered=False):
+    def get_values(self, max_value=100, cut_value=10, pwr_value=2, min_value=0, self_centered=False):
         precision=100
         if max_value < 0: max_value = abs(max_value)
         if min_value < 0 or min_value > max_value: min_value = 0
@@ -107,17 +100,16 @@ class Transmitter():
                     elif event.code == 2:
                         if not self_centered:
                             self.axis[0] = int(mapit(event.value, 21, 232, 0, precision))
-                            self.zerovl = int(mapit(event.value, 21, 232, -precision, precision))
                     elif event.code == 3:
                         self.axis[1] = int(mapit(event.value, 21, 232, -precision, precision))
 
                 self.cutted = [cuttit(i, cut_value, precision) for i in self.axis]
                 self.mapped = [mapneg(i, max_value, cut_value, precision) for i in self.axis]
-                self.curved = [curvit(i, power, max_value) for i in self.mapped]
-                self.mappos = [mappos(i, max_value, cut_value, precision, min_value) for i in self.axis]
+                self.curved = [curvit(i, pwr_value, max_value) for i in self.mapped]
+                self.mappos = [mapit(i, -max_value, max_value, min_value, max_value) for i in self.mapped]
                 
                 if not self_centered:
-                    self.mappos[0] = mapit(self.zerovl, -precision, precision, min_value, max_value)
+                    self.mappos[0] = mapit(self.mapped[0], 0, max_value, min_value, max_value)
 
                 if event.type == 1:
                     if event.code == 294: self.button[0] = int(event.value)
@@ -149,7 +141,7 @@ class Transmitter():
                 #logging.debug(str(self.axis))
                 #logging.debug(str(self.cutted))
                 logging.debug(str(self.mapped))
-                #logging.debug(str(self.curved))
+                logging.debug(str(self.curved))
                 logging.debug(str(self.mappos))
 
 
@@ -184,7 +176,7 @@ class Joystick():
         self.curved = None
         self.mappos = None
 
-    def get_values(self, max_value=100, cut_value=10, power=2, min_value=0):
+    def get_values(self, max_value=100, cut_value=10, pwr_value=2, min_value=0):
         precision=1023
         if max_value < 0: max_value = abs(max_value)
         if min_value < 0 or min_value > max_value: min_value = 0
@@ -212,8 +204,8 @@ class Joystick():
 
                 self.cutted = [cuttit(i, cut_value, precision) for i in self.axis]
                 self.mapped = [mapneg(i, max_value, cut_value, precision) for i in self.axis]
-                self.mappos = [mappos(i, max_value, cut_value, precision, min_value) for i in self.axis]
-                self.curved = [curvit(i, power, max_value) for i in self.mapped]
+                self.mappos = [mapit(i, -max_value, max_value, min_value, max_value) for i in self.mapped]
+                self.curved = [curvit(i, pwr_value, max_value) for i in self.mapped]
 
                 self.trig_cutted = [0 if i < cut_value else mapit(i, cut_value, precision, 0, precision-cut_value) for i in self.trig]
                 self.trig_mapped = [mapit(i, 0, precision-cut_value, 0, max_value) for i in self.trig_cutted]
@@ -262,7 +254,7 @@ class Navigator():
         self.curved = None
         self.mappos = None
 
-    def get_values(self, max_value=100, cut_value=10, power=2, min_value=0):
+    def get_values(self, max_value=100, cut_value=10, pwr_value=2, min_value=0):
         precision=350
         if max_value < 0: max_value = abs(max_value)
         if min_value < 0 or min_value > max_value: min_value = 0
@@ -285,10 +277,10 @@ class Navigator():
                     elif event.code == 5:
                         self.axis[5] = int(event.value)
                 
-                self.curved = [curvit(i, power, max_value) for i in self.mapped]
+                self.cutted = [cuttit(i, cut_value, precision) for i in self.axis]
                 self.mapped = [mapneg(i, max_value, cut_value, precision) for i in self.axis]
-                self.mappos = [mappos(i, max_value, cut_value, precision, min_value) for i in self.axis]
-                self.curved = [curvit(i, power, max_value) for i in self.mapped]
+                self.mappos = [mapit(i, -max_value, max_value, min_value, max_value) for i in self.mapped]
+                self.curved = [curvit(i, pwr_value, max_value) for i in self.mapped]
 
                 if event.type == 1:
                     if event.code == 256: self.buttons[0] = int(event.value)
