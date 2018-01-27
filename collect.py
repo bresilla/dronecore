@@ -3,13 +3,12 @@ import cv2
 
 cap = cv2.VideoCapture(0)
 
-name_type = 'Small_cat'
-
+# Labels for image classes and the keyboard event keys associated with them
 label = {"s":"STRAIGHT", "r":"RIGHT", "l":"LEFT"}
 number = {label[i]:0 for i in label}
 
+# Directory where data will be saved (will be created if does not exist)
 data_dir = '/home/trim/Data/'
-
 for index, value in enumerate(label):
     if not os.path.exists(data_dir+label[value]):
         os.makedirs(data_dir+label[value])
@@ -20,10 +19,9 @@ while True:
     # Read in single frame from webcam
     ret, frame = cap.read()
 
-    # Use this line locally to display the current frame
+    # Display the current frame
     cv2.imshow('FRAME', frame)
 
-    # Use esc to take photos when you're ready
     for index, value in enumerate(label):
         if cv2.waitKey(1) & keyboard.is_pressed(value):
             image_dir = data_dir + label[value] + "/" + str(number[label[value]]) + ".png"
@@ -34,7 +32,7 @@ while True:
             print image_dir
             number[label[value]]+=1
 
-    # Press q to quit the program
+    # Press ESCAPE to quit the program
     if cv2.waitKey(1) & keyboard.is_pressed("esc"):
         break
 
