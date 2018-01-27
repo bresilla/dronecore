@@ -25,7 +25,6 @@ while True:
     for index, value in enumerate(label):
         if cv2.waitKey(1) & keyboard.is_pressed(value):
             image_dir = data_dir + label[value] + "/" + str(number[label[value]]) + ".png"
-            #gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
             frame = cv2.resize(frame,(360,360), interpolation = cv2.INTER_NEAREST)
             cv2.imwrite(image_dir, frame)
 
